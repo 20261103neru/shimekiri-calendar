@@ -1,0 +1,115 @@
+name: shimekiri
+
+# 時刻は UTC（日本時間 = UTC + 9時間）
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created]
+  schedule:
+    - cron: "11 22 * * *"   # 毎朝 7:11 JST：今日締切を投稿
+    - cron: "37 8 * * *"    # 毎夕 17:37 JST：締切リマインド（今日の残り＋明日）
+    - cron: "3 15 * * *"    # 毎晩 0:03 JST：締切を過ぎたものをサイトから外す
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: shimekiri
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    # あなた（リポジトリの持ち主・共同編集者）の Issue とコメントだけを処理する
+    if: >-
+      (github.event_name == 'issues' && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
+      (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      changed: ${{ steps.run.outputs.changed }}
+      new_entry: ${{ steps.run.outputs.new_entry }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - id: run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m shimekiri intake
+      - name: 下書き・掲載データを保存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "update entries [skip ci]"
+          git push
+
+  site:
+    needs: intake
+    if: >-
+      always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      needs.intake.outputs.changed == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}   # intake が保存した最新のデータを使う
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: X に投稿
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          DRY_RUN: ${{ vars.DRY_RUN }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          POST_SITE_LINK: ${{ vars.POST_SITE_LINK }}
+        run: |
+          case "${{ github.event.schedule }}" in
+            "11 22 * * *") python -m shimekiri post morning ;;
+            "37 8 * * *")  python -m shimekiri post evening ;;
+          esac
+          if [ -n "${{ needs.intake.outputs.new_entry }}" ]; then
+            python -m shimekiri post new --entry "${{ needs.intake.outputs.new_entry }}"
+          fi
+
+      - name: サイトとカレンダーを作る
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_TITLE: ${{ vars.SITE_TITLE }}
+        run: |
+          if [ -z "$SITE_TITLE" ]; then unset SITE_TITLE; fi
+          python -m shimekiri build --out public
+
+      - name: 投稿記録を保存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "update post state [skip ci]"
+          git push
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deploy
+        uses: actions/deploy-pages@v4

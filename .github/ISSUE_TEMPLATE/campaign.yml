@@ -1,0 +1,54 @@
+name: キャンペーンを登録
+description: 見つけた懸賞・ポイ活キャンペーンのURLを貼ると、締切を読み取って下書きを返します
+title: "[登録] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        公式ページのURLと種類だけでも登録できます。空の欄はページから自動で読み取ります。
+        下書きがコメントで返ってくるので、確認して **公開** とコメントすると掲載されます。
+  - type: input
+    id: url
+    attributes:
+      label: 公式ページのURL
+      placeholder: https://
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 種類
+      options:
+        - 懸賞
+        - ポイ活
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: ひとこと紹介（自分の言葉で）
+      description: 140字まで。例「1万ptが30名に当たる。フォローとリポストだけで応募できる」
+  - type: input
+    id: name
+    attributes:
+      label: キャンペーン名（空ならページから自動）
+  - type: input
+    id: deadline
+    attributes:
+      label: 締切（空なら自動で読み取り）
+      placeholder: 2026-11-30 23:59
+  - type: input
+    id: prize
+    attributes:
+      label: 賞品・還元内容（空なら自動で候補）
+      placeholder: ギフト券1万円 / 10%還元（上限2,000ポイント）
+  - type: input
+    id: conditions
+    attributes:
+      label: 応募・参加の条件（空なら自動で候補）
+      placeholder: Xでフォロー＆リポスト、要エントリー
+  - type: input
+    id: affiliate
+    attributes:
+      label: アフィリエイトリンク（任意）
+      description: 入れたものには自動で「PR」表記が付きます
