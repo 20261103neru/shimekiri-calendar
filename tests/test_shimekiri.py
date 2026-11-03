@@ -252,3 +252,16 @@ class TestOAuth(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRealPageFixes(unittest.TestCase):
+    def test_name_with_fullwidth_bar_no_spaces(self):
+        self.assertEqual(
+            hints.campaign_name("【要エントリー】対象のスーパーマーケット限定！10%ポイント還元キャンペーン｜ららぽーとTOKYO-BAY"),
+            "対象のスーパーマーケット限定!10%ポイント還元キャンペーン")
+
+    def test_line_share_button_is_not_a_condition(self):
+        t = ("エントリーのうえ対象カードで払うと10%還元\nLINE友だち追加はこちら\n"
+             "前へ 三井ショッピングパークポイントLINE公式アカウント友だちプレゼントキャンペーン")
+        self.assertNotIn("LINE友だち追加", hints.tags(t))
+        self.assertIn("LINE友だち追加", hints.tags("応募方法：公式LINEを友だち追加して、アンケートに回答"))

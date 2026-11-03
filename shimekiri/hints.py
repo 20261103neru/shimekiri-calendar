@@ -9,7 +9,7 @@ from .dates import normalize
 
 def campaign_name(title: str) -> str:
     t = normalize(title).strip()
-    t = re.split(r"\s+[|｜]\s+|\s+[-–—]\s+(?=[^-–—]+$)", t)[0]  # 「… | サイト名」「… - サイト名」を落とす
+    t = re.split(r"\s*[|｜]\s*|\s+[-–—]\s+(?=[^-–—]+$)", t)[0]  # 「…|サイト名」「… - サイト名」を落とす
     t = re.sub(r"^(【[^】]*】\s*)+", "", t).strip(" !！")
     return t[:40]
 
@@ -46,10 +46,18 @@ def reward(text: str) -> str:
     return "".join(parts)
 
 
+# SNS系は、ページのシェアボタンなどに反応しないよう「応募・参加の説明をしている行」だけで判定する
+_APPLY_CTX = r"応募|参加|条件|方法|対象|エントリー|プレゼント|当選|抽選"
+
+
+def _sns_lines(t: str) -> str:
+    return "\n".join(l for l in t.split("\n") if re.search(_APPLY_CTX, l))
+
+
 _TAG_RULES = [
-    ("Xでフォロー＆リポスト", lambda t: "フォロー" in t and re.search(r"リポスト|RT|リツイート", t)),
-    ("Instagramでフォロー", lambda t: "Instagram" in t and "フォロー" in t),
-    ("LINE友だち追加", lambda t: "LINE" in t and re.search(r"友だち|友達", t)),
+    ("Xでフォロー＆リポスト", lambda t: (lambda s: "フォロー" in s and re.search(r"リポスト|RT|リツイート", s))(_sns_lines(t))),
+    ("Instagramでフォロー", lambda t: (lambda s: "Instagram" in s and "フォロー" in s)(_sns_lines(t))),
+    ("LINE友だち追加", lambda t: re.search(r"LINE[^\n]{0,15}(友だち|友達)[^\n]{0,4}(追加|登録)", _sns_lines(t))),
     ("要エントリー", lambda t: "エントリー" in t),
     ("レシート応募", lambda t: "レシート" in t),
     ("購入が条件", lambda t: re.search(r"ご購入|購入の上|購入された|購入いただ", t)),
