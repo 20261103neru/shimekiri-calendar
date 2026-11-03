@@ -1,0 +1,22 @@
+{
+ "affiliate_url": null,
+ "checked_at": "2026-11-04T00:23:03.389280+09:00",
+ "deadline": "2026-11-12T23:59:00+09:00",
+ "deadline_label": "エントリー",
+ "deadline_source": "自動読み取り",
+ "id": "i1",
+ "issue": 1,
+ "kind": "ポイ活",
+ "name": "対象のスーパーマーケット限定!10%ポイント還元キャンペーン",
+ "period_end": null,
+ "prize": "",
+ "published_at": "2026-11-04T00:23:43.002455+09:00",
+ "reward": "10%還元（上限2,000ポイント）",
+ "summary": "エントリーしてから買い物でもOK",
+ "tags": [
+  "要エントリー",
+  "対象の支払い方法"
+ ],
+ "url": "https://mitsui-shopping-park.com/lalaport/tokyo-bay/event/3611219.html",
+ "winners": null
+}
